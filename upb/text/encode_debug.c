@@ -5,25 +5,29 @@
 // license that can be found in the LICENSE file or at
 // https://developers.google.com/open-source/licenses/bsd
 
-#include "upb/text/encode.h"
+#include "upb/text/encode_debug.h"
 
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "upb/base/descriptor_constants.h"
 #include "upb/base/string_view.h"
 #include "upb/lex/round_trip.h"
 #include "upb/message/array.h"
+#include "upb/message/internal/iterator.h"
 #include "upb/message/internal/map_entry.h"
 #include "upb/message/internal/map_sorter.h"
 #include "upb/message/map.h"
 #include "upb/message/message.h"
 #include "upb/message/value.h"
-#include "upb/reflection/def.h"
-#include "upb/reflection/message.h"
+#include "upb/mini_table/extension.h"
+#include "upb/mini_table/field.h"
+#include "upb/mini_table/internal/field.h"
+#include "upb/mini_table/internal/message.h"
+#include "upb/mini_table/message.h"
 #include "upb/text/encode_internal.h"
 #include "upb/wire/eps_copy_input_stream.h"
 
@@ -31,43 +35,40 @@
 #include "upb/port/def.inc"
 
 static void txtenc_msg(txtenc* e, const upb_Message* msg,
-                       const upb_MessageDef* m);
-
-static void txtenc_enum(int32_t val, const upb_FieldDef* f, txtenc* e) {
-  const upb_EnumDef* e_def = upb_FieldDef_EnumSubDef(f);
-  const upb_EnumValueDef* ev = upb_EnumDef_FindValueByNumber(e_def, val);
-
-  if (ev) {
-    UPB_PRIVATE(txtenc_printf)(e, "%s", upb_EnumValueDef_Name(ev));
-  } else {
-    UPB_PRIVATE(txtenc_printf)(e, "%" PRId32, val);
-  }
-}
+                       const upb_MiniTable* mt);
 
 static void txtenc_field(txtenc* e, upb_MessageValue val,
-                         const upb_FieldDef* f) {
+                         const upb_MiniTableField* f, const upb_MiniTable* mt,
+                         const char* optional) {
+  // optional is to pass down whether we're dealing with a "key" of a map or
+  // a "value" of a map.
+
   UPB_PRIVATE(txtenc_indent)(e);
-  const upb_CType ctype = upb_FieldDef_CType(f);
-  const bool is_ext = upb_FieldDef_IsExtension(f);
-  const char* full = upb_FieldDef_FullName(f);
-  const char* name = upb_FieldDef_Name(f);
+  const upb_CType ctype = upb_MiniTableField_CType(f);
+  const bool is_ext = upb_MiniTableField_IsExtension(f);
+  char number[10];  // A 32-bit integer can hold up to 10 digits.
+  sprintf(number, "%" PRIu32, upb_MiniTableField_Number(f));
 
   if (ctype == kUpb_CType_Message) {
-// begin:google_only
-//     // TODO: Turn this into a feature check and opensource it.
-//     if (_upb_FieldDef_IsGroupLike(f)) {
-//       const upb_MessageDef* m = upb_FieldDef_MessageSubDef(f);
-//       name = upb_MessageDef_Name(m);
-//     }
-// end:google_only
     if (is_ext) {
-      UPB_PRIVATE(txtenc_printf)(e, "[%s] {", full);
+      // when we have a map we want to print out either "key" or "value", not a
+      // field number
+      if (optional != NULL) {
+        UPB_PRIVATE(txtenc_printf)(e, "[%s] {", optional);
+      } else {
+        UPB_PRIVATE(txtenc_printf)(e, "[%s] {", number);
+      }
     } else {
-      UPB_PRIVATE(txtenc_printf)(e, "%s {", name);
+      if (optional != NULL) {
+        UPB_PRIVATE(txtenc_printf)(e, "%s {", optional);
+      } else {
+        UPB_PRIVATE(txtenc_printf)(e, "%s {", number);
+      }
     }
+
     UPB_PRIVATE(txtenc_endfield)(e);
     e->indent_depth++;
-    txtenc_msg(e, val.msg_val, upb_FieldDef_MessageSubDef(f));
+    txtenc_msg(e, val.msg_val, upb_MiniTable_SubMessage(mt, f));
     e->indent_depth--;
     UPB_PRIVATE(txtenc_indent)(e);
     UPB_PRIVATE(txtenc_putstr)(e, "}");
@@ -76,9 +77,17 @@ static void txtenc_field(txtenc* e, upb_MessageValue val,
   }
 
   if (is_ext) {
-    UPB_PRIVATE(txtenc_printf)(e, "[%s]: ", full);
+    if (optional != NULL) {
+      UPB_PRIVATE(txtenc_printf)(e, "[%s]: ", optional);
+    } else {
+      UPB_PRIVATE(txtenc_printf)(e, "[%s]: ", number);
+    }
   } else {
-    UPB_PRIVATE(txtenc_printf)(e, "%s: ", name);
+    if (optional != NULL) {
+      UPB_PRIVATE(txtenc_printf)(e, "%s: ", optional);
+    } else {
+      UPB_PRIVATE(txtenc_printf)(e, "%s: ", number);
+    }
   }
 
   switch (ctype) {
@@ -117,7 +126,7 @@ static void txtenc_field(txtenc* e, upb_MessageValue val,
       UPB_PRIVATE(txtenc_bytes)(e, val.str_val);
       break;
     case kUpb_CType_Enum:
-      txtenc_enum(val.int32_val, f, e);
+      UPB_PRIVATE(txtenc_printf)(e, "%" PRId32, val.int32_val);
       break;
     default:
       UPB_UNREACHABLE();
@@ -129,32 +138,34 @@ static void txtenc_field(txtenc* e, upb_MessageValue val,
 /*
  * Arrays print as simple repeated elements, eg.
  *
- *    foo_field: 1
- *    foo_field: 2
- *    foo_field: 3
+ *    5: 1
+ *    5: 2
+ *    5: 3
  */
 static void txtenc_array(txtenc* e, const upb_Array* arr,
-                         const upb_FieldDef* f) {
+                         const upb_MiniTableField* f, const upb_MiniTable* mt) {
   size_t i;
   size_t size = upb_Array_Size(arr);
 
   for (i = 0; i < size; i++) {
-    txtenc_field(e, upb_Array_Get(arr, i), f);
+    txtenc_field(e, upb_Array_Get(arr, i), f, mt, NULL);
   }
 }
 
 static void txtenc_mapentry(txtenc* e, upb_MessageValue key,
-                            upb_MessageValue val, const upb_FieldDef* f) {
-  const upb_MessageDef* entry = upb_FieldDef_MessageSubDef(f);
-  const upb_FieldDef* key_f = upb_MessageDef_Field(entry, 0);
-  const upb_FieldDef* val_f = upb_MessageDef_Field(entry, 1);
+                            upb_MessageValue val, const upb_MiniTableField* f,
+                            const upb_MiniTable* mt) {
+  const upb_MiniTable* entry = upb_MiniTable_SubMessage(mt, f);
+  const upb_MiniTableField* key_f = upb_MiniTable_MapKey(entry);
+  const upb_MiniTableField* val_f = upb_MiniTable_MapValue(entry);
+
   UPB_PRIVATE(txtenc_indent)(e);
-  UPB_PRIVATE(txtenc_printf)(e, "%s {", upb_FieldDef_Name(f));
+  UPB_PRIVATE(txtenc_printf)(e, "%u {", upb_MiniTableField_Number(f));
   UPB_PRIVATE(txtenc_endfield)(e);
   e->indent_depth++;
 
-  txtenc_field(e, key, key_f);
-  txtenc_field(e, val, val_f);
+  txtenc_field(e, key, key_f, entry, "key");
+  txtenc_field(e, val, val_f, entry, "value");
 
   e->indent_depth--;
   UPB_PRIVATE(txtenc_indent)(e);
@@ -165,54 +176,74 @@ static void txtenc_mapentry(txtenc* e, upb_MessageValue key,
 /*
  * Maps print as messages of key/value, etc.
  *
- *    foo_map: {
+ *    1 {
  *      key: "abc"
  *      value: 123
  *    }
- *    foo_map: {
+ *    2 {
  *      key: "def"
  *      value: 456
  *    }
  */
-static void txtenc_map(txtenc* e, const upb_Map* map, const upb_FieldDef* f) {
+static void txtenc_map(txtenc* e, const upb_Map* map,
+                       const upb_MiniTableField* f, const upb_MiniTable* mt) {
   if (e->options & UPB_TXTENC_NOSORT) {
     size_t iter = kUpb_Map_Begin;
     upb_MessageValue key, val;
     while (upb_Map_Next(map, &key, &val, &iter)) {
-      txtenc_mapentry(e, key, val, f);
+      txtenc_mapentry(e, key, val, f, mt);
     }
   } else {
     if (upb_Map_Size(map) == 0) return;
 
-    const upb_MessageDef* entry = upb_FieldDef_MessageSubDef(f);
-    const upb_FieldDef* key_f = upb_MessageDef_Field(entry, 0);
+    const upb_MiniTable* entry = upb_MiniTable_SubMessage(mt, f);
+    const upb_MiniTableField* key_f = upb_MiniTable_GetFieldByIndex(entry, 0);
     _upb_sortedmap sorted;
     upb_MapEntry ent;
 
-    _upb_mapsorter_pushmap(&e->sorter, upb_FieldDef_Type(key_f), map, &sorted);
+    _upb_mapsorter_pushmap(&e->sorter, upb_MiniTableField_Type(key_f), map,
+                           &sorted);
     while (_upb_sortedmap_next(&e->sorter, map, &sorted, &ent)) {
       upb_MessageValue key, val;
       memcpy(&key, &ent.k, sizeof(key));
       memcpy(&val, &ent.v, sizeof(val));
-      txtenc_mapentry(e, key, val, f);
+      txtenc_mapentry(e, key, val, f, mt);
     }
     _upb_mapsorter_popmap(&e->sorter, &sorted);
   }
 }
 
 static void txtenc_msg(txtenc* e, const upb_Message* msg,
-                       const upb_MessageDef* m) {
-  size_t iter = kUpb_Message_Begin;
-  const upb_FieldDef* f;
+                       const upb_MiniTable* mt) {
+  size_t iter = kUpb_BaseField_Begin;
+  const upb_MiniTableField* f;
   upb_MessageValue val;
 
-  while (upb_Message_Next(msg, m, e->ext_pool, &f, &val, &iter)) {
-    if (upb_FieldDef_IsMap(f)) {
-      txtenc_map(e, val.map_val, f);
-    } else if (upb_FieldDef_IsRepeated(f)) {
-      txtenc_array(e, val.array_val, f);
+  // Base fields will be printed out first, followed by extension fields, and
+  // finally unknown fields.
+
+  while (UPB_PRIVATE(_upb_Message_NextBaseField)(msg, mt, &f, &val, &iter)) {
+    if (upb_MiniTableField_IsMap(f)) {
+      txtenc_map(e, val.map_val, f, mt);
+    } else if (upb_MiniTableField_IsArray(f)) {
+      txtenc_array(e, val.array_val, f, mt);
     } else {
-      txtenc_field(e, val, f);
+      txtenc_field(e, val, f, mt, NULL);
+    }
+  }
+
+  const upb_MiniTableExtension* ext;
+  upb_MessageValue val_ext;
+  iter = kUpb_Extension_Begin;
+  while (
+      UPB_PRIVATE(_upb_Message_NextExtension)(msg, mt, &ext, &val_ext, &iter)) {
+    const upb_MiniTableField* f = &ext->UPB_PRIVATE(field);
+    if (upb_MiniTableField_IsMap(f)) {
+      txtenc_map(e, val.map_val, f, mt);
+    } else if (upb_MiniTableField_IsArray(f)) {
+      txtenc_array(e, val.array_val, f, mt);
+    } else {
+      txtenc_field(e, val, f, mt, NULL);
     }
   }
 
@@ -231,9 +262,8 @@ static void txtenc_msg(txtenc* e, const upb_Message* msg,
   }
 }
 
-size_t upb_TextEncode(const upb_Message* msg, const upb_MessageDef* m,
-                      const upb_DefPool* ext_pool, int options, char* buf,
-                      size_t size) {
+size_t upb_TextEncode_Debug(const upb_Message* msg, const upb_MiniTable* mt,
+                            int options, char* buf, size_t size) {
   txtenc e;
 
   e.buf = buf;
@@ -242,10 +272,10 @@ size_t upb_TextEncode(const upb_Message* msg, const upb_MessageDef* m,
   e.overflow = 0;
   e.indent_depth = 0;
   e.options = options;
-  e.ext_pool = ext_pool;
+  e.ext_pool = NULL;
   _upb_mapsorter_init(&e.sorter);
 
-  txtenc_msg(&e, msg, m);
+  txtenc_msg(&e, msg, mt);
   _upb_mapsorter_destroy(&e.sorter);
   return UPB_PRIVATE(txtenc_nullz)(&e, size);
 }

@@ -24,6 +24,7 @@
 #include "upb/port/def.inc"
 #include "upb/reflection/message.h"
 #include "upb/text/encode.h"
+#include "upb/text/encode_internal.h"
 
 /*
  * Message/Map/Array objects.  These objects form a directed graph: a message

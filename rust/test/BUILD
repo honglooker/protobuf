@@ -15,7 +15,10 @@ UNITTEST_EDITION_TARGET = "//src/google/protobuf:test_protos"
 rust_upb_proto_library(
     name = "unittest_upb_rust_proto",
     testonly = True,
-    visibility = ["//rust/test/shared:__subpackages__"],
+    visibility = [
+        "//rust/test/shared:__subpackages__",
+        "//rust/test/upb:__subpackages__",
+    ],
     deps = [UNITTEST_PROTO_TARGET],
 )
 
@@ -70,7 +73,10 @@ rust_cc_proto_library(
 rust_upb_proto_library(
     name = "unittest_edition_upb_rust_proto",
     testonly = True,
-    visibility = ["//rust/test/shared:__subpackages__"],
+    visibility = [
+        "//rust/test/shared:__subpackages__",
+        "//rust/test/upb:__subpackages__",
+    ],
     deps = [UNITTEST_EDITION_TARGET],
 )
 
@@ -379,6 +385,7 @@ rust_upb_proto_library(
     testonly = True,
     visibility = [
         "//rust/test/shared:__subpackages__",
+        "//rust/test/upb:__subpackages__",
     ],
     deps = ["//src/google/protobuf:map_unittest_proto"],
 )

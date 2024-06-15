@@ -203,6 +203,7 @@ py_extension(
         "//upb:text",
         "//upb:wire_reader",
         "//upb/hash",
+        "//upb/text:text_internal",
         "//upb/util:def_to_proto",
         "//upb/util:required_fields",
     ],

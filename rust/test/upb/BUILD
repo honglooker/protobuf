@@ -26,3 +26,16 @@ rust_test(
         "@crate_index//:googletest",
     ],
 )
+
+# blaze test //rust/test/upb:test --test_arg=--nocapture -c dbg --test_output=all to see debug string in test output logs.
+rust_test(
+    name = "debug_string_test",
+    srcs = ["debug_string_test.rs"],
+    deps = [
+        "//rust:protobuf_upb",
+        "//rust/test:map_unittest_upb_rust_proto",
+        "//rust/test:unittest_edition_upb_rust_proto",
+        "//rust/test:unittest_upb_rust_proto",
+        "@crate_index//:googletest",
+    ],
+)

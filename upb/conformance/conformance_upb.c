@@ -25,6 +25,7 @@
 #include "upb/json/encode.h"
 #include "upb/reflection/message.h"
 #include "upb/text/encode.h"
+#include "upb/text/encode_internal.h"
 #include "upb/wire/decode.h"
 #include "upb/wire/encode.h"
 

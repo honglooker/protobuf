@@ -77,6 +77,7 @@ cc_binary(
         "//upb:reflection",
         "//upb:text",
         "//upb:wire",
+        "//upb/text:text_internal",
     ],
 )
 
@@ -131,6 +132,7 @@ cc_binary(
         "//upb:reflection",
         "//upb:text",
         "//upb:wire",
+        "//upb/text:text_internal",
     ],
 )
 

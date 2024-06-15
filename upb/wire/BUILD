@@ -44,10 +44,10 @@ cc_library(
 cc_library(
     name = "reader",
     srcs = [
-        "internal/reader.h",
         "reader.c",
     ],
     hdrs = [
+        "internal/reader.h",
         "reader.h",
         "types.h",
     ],

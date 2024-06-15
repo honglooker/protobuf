@@ -35,6 +35,7 @@ cc_library(
         "//upb:port",
         "//upb:reflection",
         "//upb:text",
+        "//upb/text:text_internal",
         "@lua//:liblua",
     ],
 )
