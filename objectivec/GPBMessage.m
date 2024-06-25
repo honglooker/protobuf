@@ -3537,10 +3537,7 @@ GPB_INLINE BOOL GPBIsCaseOfSelForOneOf(const char *selName, size_t selNameLength
   if (self) {
     NSData *data = [aDecoder decodeObjectOfClass:[NSData class] forKey:kGPBDataCoderKey];
     if (data.length) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-      [self mergeFromData:data extensionRegistry:nil];
-#pragma clang diagnostic pop
+      [self mergeFromData:data extensionRegistry:nil error:NULL];
     }
   }
   return self;
