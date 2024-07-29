@@ -314,6 +314,16 @@ pub fn debug_string(_private: Private, msg: RawMessage, f: &mut fmt::Formatter<'
     write!(f, "{dbg_str}")
 }
 
+extern "C" {
+    fn proto2_rust_equals(msg1: RawMessage, msg2: RawMessage) -> bool;
+}
+
+pub fn equals(_private: Private, msg1: RawMessage, msg2: RawMessage) -> bool {
+    // SAFETY:
+    // - `msg1` and `msg2` are valid protobuf messages.
+    unsafe { proto2_rust_equals(msg1, msg2) }
+}
+
 pub type RawMapIter = UntypedMapIterator;
 
 /// The raw contents of every generated message.
