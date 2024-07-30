@@ -433,8 +433,7 @@ TEST(CppGeneratedCode, RepeatedScalarIterator) {
   test_model.mutable_value_array()->push_back(27);
   int sum = 0;
   // Access by value.
-  const ::protos::RepeatedField<int32_t>::CProxy rep1 =
-      test_model.value_array();
+  const ::hpb::RepeatedField<int32_t>::CProxy rep1 = test_model.value_array();
   for (auto i : rep1) {
     sum += i;
   }
@@ -479,13 +478,13 @@ TEST(CppGeneratedCode, RepeatedScalarIterator) {
   EXPECT_EQ(it[2], 27);
   // ValueProxy.
   sum = 0;
-  for (::protos::RepeatedField<int32_t>::ValueCProxy c :
+  for (::hpb::RepeatedField<int32_t>::ValueCProxy c :
        test_model.value_array()) {
     sum += c;
   }
   EXPECT_EQ(sum, 5 + 16 + 27);
   sum = 0;
-  for (::protos::RepeatedField<int32_t>::ValueProxy c :
+  for (::hpb::RepeatedField<int32_t>::ValueProxy c :
        *test_model.mutable_value_array()) {
     sum += c;
   }
@@ -887,7 +886,7 @@ TEST(CppGeneratedCode, SerializeUsingArena) {
   TestModel model;
   model.set_str1("Hello World");
   ::upb::Arena arena;
-  absl::StatusOr<absl::string_view> bytes = ::protos::Serialize(&model, arena);
+  absl::StatusOr<absl::string_view> bytes = ::hpb::Serialize(&model, arena);
   EXPECT_EQ(true, bytes.ok());
   TestModel parsed_model = ::protos::Parse<TestModel>(bytes.value()).value();
   EXPECT_EQ("Hello World", parsed_model.str1());
@@ -899,7 +898,7 @@ TEST(CppGeneratedCode, SerializeProxyUsingArena) {
   model_proxy.set_str1("Hello World");
   ::upb::Arena arena;
   absl::StatusOr<absl::string_view> bytes =
-      ::protos::Serialize(&model_proxy, arena);
+      ::hpb::Serialize(&model_proxy, arena);
   EXPECT_EQ(true, bytes.ok());
   TestModel parsed_model = ::protos::Parse<TestModel>(bytes.value()).value();
   EXPECT_EQ("Hello World", parsed_model.str1());
@@ -910,7 +909,7 @@ TEST(CppGeneratedCode, SerializeNestedMessageUsingArena) {
   model.mutable_recursive_child()->set_str1("Hello World");
   ::upb::Arena arena;
   ::hpb::Ptr<const TestModel> child = model.recursive_child();
-  absl::StatusOr<absl::string_view> bytes = ::protos::Serialize(child, arena);
+  absl::StatusOr<absl::string_view> bytes = ::hpb::Serialize(child, arena);
   EXPECT_EQ(true, bytes.ok());
   TestModel parsed_model = ::protos::Parse<TestModel>(bytes.value()).value();
   EXPECT_EQ("Hello World", parsed_model.str1());
@@ -923,7 +922,7 @@ TEST(CppGeneratedCode, Parse) {
   extension1.set_ext_name("Hello World");
   EXPECT_EQ(true, ::hpb::SetExtension(&model, theme, extension1).ok());
   ::upb::Arena arena;
-  auto bytes = ::protos::Serialize(&model, arena);
+  auto bytes = ::hpb::Serialize(&model, arena);
   EXPECT_EQ(true, bytes.ok());
   TestModel parsed_model = ::protos::Parse<TestModel>(bytes.value()).value();
   EXPECT_EQ("Test123", parsed_model.str1());
@@ -937,7 +936,7 @@ TEST(CppGeneratedCode, ParseIntoPtrToModel) {
   extension1.set_ext_name("Hello World");
   EXPECT_EQ(true, ::hpb::SetExtension(&model, theme, extension1).ok());
   ::upb::Arena arena;
-  auto bytes = ::protos::Serialize(&model, arena);
+  auto bytes = ::hpb::Serialize(&model, arena);
   EXPECT_EQ(true, bytes.ok());
   ::hpb::Ptr<TestModel> parsed_model = ::hpb::CreateMessage<TestModel>(arena);
   EXPECT_TRUE(::protos::Parse(parsed_model, bytes.value()));
@@ -957,7 +956,7 @@ TEST(CppGeneratedCode, ParseWithExtensionRegistry) {
                                       extension1)
                       .ok());
   ::upb::Arena arena;
-  auto bytes = ::protos::Serialize(&model, arena);
+  auto bytes = ::hpb::Serialize(&model, arena);
   EXPECT_EQ(true, bytes.ok());
   ::hpb::ExtensionRegistry extensions(
       {&theme, &other_ext, &ThemeExtension::theme_extension}, arena);
@@ -985,14 +984,14 @@ TEST(CppGeneratedCode, NameCollisions) {
 TEST(CppGeneratedCode, SharedPointer) {
   std::shared_ptr<TestModel> model = std::make_shared<TestModel>();
   ::upb::Arena arena;
-  auto bytes = ::protos::Serialize(model.get(), arena);
+  auto bytes = ::hpb::Serialize(model.get(), arena);
   EXPECT_TRUE(::protos::Parse(model.get(), bytes.value()));
 }
 
 TEST(CppGeneratedCode, UniquePointer) {
   auto model = std::make_unique<TestModel>();
   ::upb::Arena arena;
-  auto bytes = ::protos::Serialize(model.get(), arena);
+  auto bytes = ::hpb::Serialize(model.get(), arena);
   EXPECT_TRUE(::protos::Parse(model.get(), bytes.value()));
 }
 
@@ -1221,7 +1220,7 @@ TEST(CppGeneratedCode, HasExtensionAndRegistry) {
 
   // Now that we have a source model with extension data, serialize.
   ::hpb::Arena arena;
-  std::string data = std::string(::protos::Serialize(&source, arena).value());
+  std::string data = std::string(::hpb::Serialize(&source, arena).value());
 
   // Test with ExtensionRegistry
   ::hpb::ExtensionRegistry extensions({&theme}, arena);

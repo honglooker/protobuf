@@ -29,10 +29,17 @@ using hpb::ClearMessage;
 using hpb::CloneMessage;
 using hpb::CreateMessage;
 using hpb::DeepCopy;
+using hpb::Parse;
+using hpb::Serialize;
 
 using hpb::ClearExtension;
+using hpb::ExtensionNumber;
 using hpb::GetExtension;
 using hpb::HasExtension;
 using hpb::SetExtension;
+
+using hpb::Arena;
+using hpb::MessageAllocationError;
+using hpb::Ptr;
 }  // namespace protos
 #endif
