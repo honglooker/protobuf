@@ -84,6 +84,11 @@ public abstract class AbstractMessage
 
   @Override
   public final String toString() {
+    if (ProtobufToStringOutput.shoudlOuputDebugFormat()) {
+      return TextFormat.printer().enablingSafeDebugFormat(true)
+          .setFieldReporterLevel(TextFormat.Printer.FieldReporterLevel.ABSTRACT_TO_STRING)
+          .printToString(this);
+    }
     return TextFormat.printer()
         .setFieldReporterLevel(TextFormat.Printer.FieldReporterLevel.ABSTRACT_TO_STRING)
         .printToString(this);
