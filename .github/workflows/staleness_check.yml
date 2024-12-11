@@ -53,11 +53,13 @@ jobs:
           version: 7.1.2 # Bazel version
           credentials: ${{ secrets.GAR_SERVICE_ACCOUNT }}
           bazel-cache: staleness
+          # TODO: Disable bzlmod for bazel query, or remove //python/dist targets from check:
+          # https://github.com/protocolbuffers/protobuf/actions/runs/12674986130/job/35325099994?pr=19898
           bash: >
             set -ex;
             echo "Please run ./regenerate_stale_files.sh to regenerate stale files";
             if [[ -z $COMMIT_TRIGGERED_RUN || -z $MAIN_RUN ]]; then
-            bazel query 'attr(tags, "staleness_test", //...)' | xargs bazel test $BAZEL_FLAGS;
+            bazel query 'attr(tags, "staleness_test", //...)' --noenable_bzlmod| xargs bazel test $BAZEL_FLAGS;
             else
-            bazel query 'attr(tags, "staleness_test", //...)';
+            bazel query 'attr(tags, "staleness_test", //...)' --noenable_bzlmod;
             fi
