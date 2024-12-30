@@ -268,47 +268,62 @@ TEST_F(CodeGeneratorTest, BuildFeatureSetDefaults) {
   generator.set_feature_extensions({});
   generator.set_minimum_edition(EDITION_99997_TEST_ONLY);
   generator.set_maximum_edition(EDITION_99999_TEST_ONLY);
-  EXPECT_THAT(generator.BuildFeatureSetDefaults(),
-              IsOkAndHolds(EqualsProto(R"pb(
-                defaults {
-                  edition: EDITION_LEGACY
-                  overridable_features {}
-                  fixed_features {
-                    field_presence: EXPLICIT
-                    enum_type: CLOSED
-                    repeated_field_encoding: EXPANDED
-                    utf8_validation: NONE
-                    message_encoding: LENGTH_PREFIXED
-                    json_format: LEGACY_BEST_EFFORT
-                  }
-                }
-                defaults {
-                  edition: EDITION_PROTO3
-                  overridable_features {}
-                  fixed_features {
-                    field_presence: IMPLICIT
-                    enum_type: OPEN
-                    repeated_field_encoding: PACKED
-                    utf8_validation: VERIFY
-                    message_encoding: LENGTH_PREFIXED
-                    json_format: ALLOW
-                  }
-                }
-                defaults {
-                  edition: EDITION_2023
-                  overridable_features {
-                    field_presence: EXPLICIT
-                    enum_type: OPEN
-                    repeated_field_encoding: PACKED
-                    utf8_validation: VERIFY
-                    message_encoding: LENGTH_PREFIXED
-                    json_format: ALLOW
-                  }
-                  fixed_features {}
-                }
-                minimum_edition: EDITION_PROTO2
-                maximum_edition: EDITION_2024
-              )pb")));
+  EXPECT_THAT(
+      generator.BuildFeatureSetDefaults(), IsOkAndHolds(EqualsProto(R"pb(
+        defaults {
+          edition: EDITION_LEGACY
+          overridable_features {}
+          fixed_features {
+            field_presence: EXPLICIT
+            enum_type: CLOSED
+            repeated_field_encoding: EXPANDED
+            utf8_validation: NONE
+            message_encoding: LENGTH_PREFIXED
+            json_format: LEGACY_BEST_EFFORT
+            enforce_naming_style: ALLOW_NONCONFORMANT_NAMES
+          }
+        }
+        defaults {
+          edition: EDITION_PROTO3
+          overridable_features {}
+          fixed_features {
+            field_presence: IMPLICIT
+            enum_type: OPEN
+            repeated_field_encoding: PACKED
+            utf8_validation: VERIFY
+            message_encoding: LENGTH_PREFIXED
+            json_format: ALLOW
+            enforce_naming_style: ALLOW_NONCONFORMANT_NAMES
+          }
+        }
+        defaults {
+          edition: EDITION_2023
+          overridable_features {
+            field_presence: EXPLICIT
+            enum_type: OPEN
+            repeated_field_encoding: PACKED
+            utf8_validation: VERIFY
+            message_encoding: LENGTH_PREFIXED
+            json_format: ALLOW
+          }
+          fixed_features { enforce_naming_style: ALLOW_NONCONFORMANT_NAMES }
+        }
+        defaults {
+          edition: EDITION_2024
+          overridable_features {
+            field_presence: EXPLICIT
+            enum_type: OPEN
+            repeated_field_encoding: PACKED
+            utf8_validation: VERIFY
+            message_encoding: LENGTH_PREFIXED
+            json_format: ALLOW
+            enforce_naming_style: ENFORCE
+          }
+          fixed_features {}
+        }
+        minimum_edition: EDITION_PROTO2
+        maximum_edition: EDITION_2024
+      )pb")));
 }
 
 TEST_F(CodeGeneratorTest, BuildFeatureSetDefaultsUnsupported) {
