@@ -443,6 +443,7 @@ py_wheel(
     }),
     version = PROTOBUF_PYTHON_VERSION,
     deps = [
+        ":message_mod",  # Enables UPB
         "//:python_common_test_protos",
         "//:python_specific_test_protos",
         "//:python_test_srcs",

@@ -37,6 +37,7 @@ def build_targets(name):
         }),
         visibility = ["//:__pkg__"],
         deps = [
+            ":_message",  # Enables UPB
             ":python_srcs",
             ":well_known_types_py_pb2",
         ],
@@ -466,6 +467,11 @@ def build_targets(name):
     internal_py_test(
         name = "python_version_test",
         srcs = ["python_version_test.py"],
+    )
+
+    internal_py_test(
+        name = "python_api_test",
+        srcs = ["python_api_test.py"],
     )
 
     conformance_test(

@@ -66,7 +66,10 @@ jobs:
           image: ${{ matrix.image || format('us-docker.pkg.dev/protobuf-build/containers/test/linux/python:7.1.2-{0}-d9624f2aa83cba3eaf906f751d75b36aacb9aa82', matrix.version) }}
           credentials: ${{ secrets.GAR_SERVICE_ACCOUNT }}
           bazel-cache: python_linux/${{ matrix.type }}_${{ matrix.version }}
-          bazel: test ${{ matrix.targets }} ${{ matrix.flags }} --test_env=KOKORO_PYTHON_VERSION
+          bazel: >-
+            test ${{ matrix.targets }} ${{ matrix.flags }}
+            --test_env=KOKORO_PYTHON_VERSION
+            --test_env=PROTOCOL_BUFFERS_EXPECTED_PYTHON_BACKEND=${{ matrix.type }}
 
 
   macos:
@@ -77,9 +80,9 @@ jobs:
         version: [ "3.12", "3.13" ]
         include:
           - type: Pure
-            targets: //python/... //python:python_version_test
+            targets: //python/... //python:python_version_test //python:python_api_test
           - type: C++
-            targets: //python/... //python:python_version_test
+            targets: //python/... //python:python_version_test //python:python_api_test
             flags: --define=use_fast_cpp_protos=true
           - version: "3.13"
             continuous-only: true
@@ -118,4 +121,5 @@ jobs:
           bazel: >-
             test ${{ matrix.targets }} ${{ matrix.flags }}
             --test_env=KOKORO_PYTHON_VERSION=${{ matrix.version }}
+            --test_env=PROTOCOL_BUFFERS_EXPECTED_PYTHON_BACKEND=${{ matrix.type }}
             --macos_minimum_os=11.0
