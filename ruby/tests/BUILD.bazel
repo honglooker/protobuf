@@ -157,6 +157,7 @@ ruby_test(
     srcs = ["well_known_types_test.rb"],
     deps = [
         ":test_ruby_protos",
+        "//ruby:conformance_test_ruby_proto",
         "//ruby:protobuf",
         "@protobuf_bundle//:test-unit",
     ],

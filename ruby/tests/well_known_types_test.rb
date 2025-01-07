@@ -1,6 +1,7 @@
 #!/usr/bin/ruby
 
 require 'test/unit'
+require 'google/protobuf/test_messages_proto3_pb'
 require 'google/protobuf/well_known_types'
 
 class TestWellKnownTypes < Test::Unit::TestCase
@@ -151,6 +152,30 @@ class TestWellKnownTypes < Test::Unit::TestCase
 
     assert any.is(Google::Protobuf::Timestamp)
     assert_equal ts, any.unpack(Google::Protobuf::Timestamp)
+  end
+
+  def test_any_as_json
+    empty_message = ProtobufTestMessages::Proto3::TestAllTypesProto3.new
+    assert_equal empty_message,
+                 ProtobufTestMessages::Proto3::TestAllTypesProto3.decode_json(
+                   '{"optionalAny": null}'
+                 )
+    default_message = ProtobufTestMessages::Proto3::TestAllTypesProto3.new
+    default_message.optional_any = Google::Protobuf::Any.new
+    assert_equal default_message,
+                 ProtobufTestMessages::Proto3::TestAllTypesProto3.decode_json(
+                   '{"optionalAny": {}}'
+                 )
+    assert_raises Google::Protobuf::ParseError do
+      ProtobufTestMessages::Proto3::TestAllTypesProto3.decode_json(
+        '{"optionalAny": { "@type": "", "value": ""}}'
+      )
+    end
+    assert_raises Google::Protobuf::ParseError do
+      ProtobufTestMessages::Proto3::TestAllTypesProto3.decode_json(
+        '{"optionalAny": { "@type": "not_a_url", "value": ""}}'
+      )
+    end
   end
 
   def test_struct_init

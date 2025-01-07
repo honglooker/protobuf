@@ -36,6 +36,7 @@ test_protos = %w[
   tests/test_ruby_package.proto
   tests/test_ruby_package_proto2.proto
   tests/utf8.proto
+  google/protobuf/test_messages_proto3.proto
 ]
 
 # These are omitted for now because we don't support proto2.
