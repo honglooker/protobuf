@@ -767,24 +767,24 @@ fn test_default_import_enum_accessors() {
 
 #[gtest]
 fn test_oneof_accessors() {
-    use unittest_rust_proto::test_oneof2::{Foo::*, FooCase, NestedEnum};
+    use unittest_rust_proto::test_oneof2::{Foo_Case, Foo_Oneof::*, NestedEnum};
     use unittest_rust_proto::TestOneof2;
 
     let mut msg = TestOneof2::new();
     assert_that!(msg.foo(), matches_pattern!(not_set(_)));
-    assert_that!(msg.foo_case(), eq(FooCase::not_set));
+    assert_that!(msg.foo_case(), eq(Foo_Case::not_set));
 
     msg.set_foo_int(7);
     assert_that!(msg.has_foo_int(), eq(true));
     assert_that!(msg.foo_int_opt(), eq(Optional::Set(7)));
     assert_that!(msg.foo(), matches_pattern!(FooInt(eq(7))));
-    assert_that!(msg.foo_case(), eq(FooCase::FooInt));
+    assert_that!(msg.foo_case(), eq(Foo_Case::FooInt));
 
     msg.clear_foo_int();
     assert_that!(msg.has_foo_int(), eq(false));
     assert_that!(msg.foo_int_opt(), eq(Optional::Unset(0)));
     assert_that!(msg.foo(), matches_pattern!(not_set(_)));
-    assert_that!(msg.foo_case(), eq(FooCase::not_set));
+    assert_that!(msg.foo_case(), eq(Foo_Case::not_set));
 
     msg.set_foo_int(7);
     msg.set_foo_bytes(b"123");
@@ -792,11 +792,11 @@ fn test_oneof_accessors() {
     assert_that!(msg.foo_int_opt(), eq(Optional::Unset(0)));
 
     assert_that!(msg.foo(), matches_pattern!(FooBytes(eq(b"123"))));
-    assert_that!(msg.foo_case(), eq(FooCase::FooBytes));
+    assert_that!(msg.foo_case(), eq(Foo_Case::FooBytes));
 
     msg.set_foo_enum(NestedEnum::Foo);
     assert_that!(msg.foo(), matches_pattern!(FooEnum(eq(NestedEnum::Foo))));
-    assert_that!(msg.foo_case(), eq(FooCase::FooEnum));
+    assert_that!(msg.foo_case(), eq(Foo_Case::FooEnum));
 
     // Test the accessors or $Msg$Mut
     let mut msg_mut = msg.as_mut();
@@ -804,13 +804,13 @@ fn test_oneof_accessors() {
     msg_mut.set_foo_int(7);
     msg_mut.set_foo_bytes(b"123");
     assert_that!(msg_mut.foo(), matches_pattern!(FooBytes(eq(b"123"))));
-    assert_that!(msg_mut.foo_case(), eq(FooCase::FooBytes));
+    assert_that!(msg_mut.foo_case(), eq(Foo_Case::FooBytes));
     assert_that!(msg_mut.foo_int_opt(), eq(Optional::Unset(0)));
 
     // Test the accessors on $Msg$View
     let msg_view = msg.as_view();
     assert_that!(msg_view.foo(), matches_pattern!(FooBytes(eq(b"123"))));
-    assert_that!(msg_view.foo_case(), eq(FooCase::FooBytes));
+    assert_that!(msg_view.foo_case(), eq(Foo_Case::FooBytes));
     assert_that!(msg_view.foo_int_opt(), eq(Optional::Unset(0)));
 
     // TODO: Add tests covering a message-type field in a oneof.
@@ -818,7 +818,7 @@ fn test_oneof_accessors() {
 
 #[gtest]
 fn test_msg_oneof_default_accessors() {
-    use unittest_rust_proto::test_oneof2::{Bar::*, BarCase, NestedEnum};
+    use unittest_rust_proto::test_oneof2::{Bar_Case, Bar_Oneof::*, NestedEnum};
 
     let mut msg = unittest_rust_proto::TestOneof2::new();
     assert_that!(msg.bar(), matches_pattern!(not_set(_)));
@@ -826,23 +826,23 @@ fn test_msg_oneof_default_accessors() {
     msg.set_bar_int(7);
     assert_that!(msg.bar_int_opt(), eq(Optional::Set(7)));
     assert_that!(msg.bar(), matches_pattern!(BarInt(eq(7))));
-    assert_that!(msg.bar_case(), eq(BarCase::BarInt));
+    assert_that!(msg.bar_case(), eq(Bar_Case::BarInt));
 
     msg.clear_bar_int();
     assert_that!(msg.bar_int_opt(), eq(Optional::Unset(5)));
     assert_that!(msg.bar(), matches_pattern!(not_set(_)));
-    assert_that!(msg.bar_case(), eq(BarCase::not_set));
+    assert_that!(msg.bar_case(), eq(Bar_Case::not_set));
 
     msg.set_bar_int(7);
     msg.set_bar_bytes(b"123");
     assert_that!(msg.bar_int_opt(), eq(Optional::Unset(5)));
     assert_that!(msg.bar_enum_opt(), eq(Optional::Unset(NestedEnum::Bar)));
     assert_that!(msg.bar(), matches_pattern!(BarBytes(eq(b"123"))));
-    assert_that!(msg.bar_case(), eq(BarCase::BarBytes));
+    assert_that!(msg.bar_case(), eq(Bar_Case::BarBytes));
 
     msg.set_bar_enum(NestedEnum::Baz);
     assert_that!(msg.bar(), matches_pattern!(BarEnum(eq(NestedEnum::Baz))));
-    assert_that!(msg.bar_case(), eq(BarCase::BarEnum));
+    assert_that!(msg.bar_case(), eq(Bar_Case::BarEnum));
     assert_that!(msg.bar_int_opt(), eq(Optional::Unset(5)));
 
     // TODO: Add tests covering a message-type field in a oneof.

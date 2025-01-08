@@ -37,7 +37,7 @@ namespace rust {
 // Example:
 // For this oneof:
 // message SomeMsg {
-//   oneof some_oneof {
+//   oneof some {
 //     int32 field_a = 7;
 //     SomeMsg field_b = 9;
 //   }
@@ -45,40 +45,30 @@ namespace rust {
 //
 // This will emit as the exposed API:
 // pub mod some_msg {
-//   pub enum SomeOneof<'msg> {
+//   pub enum Some_Oneof<'msg> {
 //     FieldA(i32) = 7,
 //     FieldB(View<'msg, SomeMsg>) = 9,
 //     not_set(std::marker::PhantomData<&'msg ()>) = 0
 //   }
 //
 //   #[repr(C)]
-//   pub enum SomeOneofCase {
+//   pub enum Some_Case {
 //     FieldA = 7,
 //     FieldB = 9,
 //     not_set = 0
 //   }
 // }
 // impl SomeMsg {
-//   pub fn some_oneof(&self) -> SomeOneof {...}
-//   pub fn some_oneof_case(&self) -> SomeOneofCase {...}
+//   pub fn some_oneof(&self) -> Some_Oneof {...}
+//   pub fn some_oneof_case(&self) -> Some_Case {...}
 // }
 // impl SomeMsgMut {
-//   pub fn some_oneof(&self) -> SomeOneof {...}
-//   pub fn some_oneof_case(&self) -> SomeOneofCase {...}
+//   pub fn some_oneof(&self) -> Some_Oneof {...}
+//   pub fn some_oneof_case(&self) -> Some_Case {...}
 // }
 // impl SomeMsgView {
-//   pub fn some_oneof(self) -> SomeOneof {...}
-//   pub fn some_oneof_case(self) -> SomeOneofCase {...}
-// }
-//
-// An additional "Case" enum which just reflects the corresponding slot numbers
-// is emitted for usage with the FFI (exactly matching the Case struct that both
-// cpp and upb generate).
-//
-// #[repr(C)] pub(super) enum SomeOneofCase {
-//   FieldA = 7,
-//   FieldB = 9,
-//   not_set = 0
+//   pub fn some_oneof(self) -> Some_Oneof {...}
+//   pub fn some_oneof_case(self) -> Some_Case {...}
 // }
 
 namespace {
@@ -134,6 +124,7 @@ std::string RsTypeNameView(Context& ctx, const FieldDescriptor& field) {
 void GenerateOneofDefinition(Context& ctx, const OneofDescriptor& oneof) {
   ctx.Emit(
       {
+          {"deprecated_view_enum_name", DeprecatedOneofViewEnumRsName(oneof)},
           {"view_enum_name", OneofViewEnumRsName(oneof)},
           {"view_fields",
            [&] {
@@ -159,7 +150,7 @@ void GenerateOneofDefinition(Context& ctx, const OneofDescriptor& oneof) {
       R"rs(
       #[non_exhaustive]
       #[derive(Debug, Clone, Copy)]
-      #[allow(dead_code)]
+      #[allow(dead_code, bad_style)]
       #[repr(u32)]
       pub enum $view_enum_name$<'msg> {
         $view_fields$
@@ -167,11 +158,15 @@ void GenerateOneofDefinition(Context& ctx, const OneofDescriptor& oneof) {
         #[allow(non_camel_case_types)]
         not_set(std::marker::PhantomData<&'msg ()>) = 0
       }
+
+      #[deprecated(note="Use $view_enum_name$ instead (will be imminently moved)")]
+      pub type $deprecated_view_enum_name$<'msg> = $view_enum_name$<'msg>;
       )rs");
 
   // Note: This enum is used as the Thunk return type for getting which case is
   // used: it exactly matches the generate case enum that both cpp and upb use.
-  ctx.Emit({{"case_enum_name", OneofCaseEnumRsName(oneof)},
+  ctx.Emit({{"deprecated_case_enum_name", DeprecatedOneofCaseEnumRsName(oneof)},
+            {"case_enum_name", OneofCaseEnumRsName(oneof)},
             {"cases",
              [&] {
                for (int i = 0; i < oneof.field_count(); ++i) {
@@ -201,13 +196,16 @@ void GenerateOneofDefinition(Context& ctx, const OneofDescriptor& oneof) {
            R"rs(
       #[repr(C)]
       #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-      #[allow(dead_code)]
+      #[allow(dead_code, bad_style)]
       pub enum $case_enum_name$ {
         $cases$
 
         #[allow(non_camel_case_types)]
         not_set = 0
       }
+
+      #[deprecated(note="Use $case_enum_name$ instead (will be imminently moved)")]
+      pub type $deprecated_case_enum_name$ = $case_enum_name$;
 
       impl $case_enum_name$ {
         //~ This try_from is not a TryFrom impl so that it isn't
@@ -313,7 +311,7 @@ void GenerateOneofThunkCc(Context& ctx, const OneofDescriptor& oneof) {
   ctx.Emit(
       {
           {"oneof_name", oneof.name()},
-          {"case_enum_name", OneofCaseEnumRsName(oneof)},
+          {"case_enum_name", OneofCaseEnumCppName(oneof)},
           {"case_thunk", ThunkName(ctx, oneof, "case")},
           {"QualifiedMsg", cpp::QualifiedClassName(oneof.containing_type())},
       },
